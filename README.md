@@ -1,57 +1,56 @@
-# Pain Intensity Classification from Skeletal Motion
+# Pain Intensity Classification
 
-This project was developed for the first Artificial Neural Networks and Deep Learning (AN2DL) challenge in November 2025. The task was to predict three levels of pain — **no pain, low pain, and high pain** — from sequences of human joint measurements.
+This repository contains our work for the first Artificial Neural Networks and Deep Learning (AN2DL) challenge, completed in November 2025. The task was to classify human movement sequences into three pain levels: **no pain, low pain, and high pain**.
 
-Each sample contains 160 timesteps and initially 31 joint features. The dataset is quite imbalanced, with far more no-pain sequences than high-pain ones. We also found that some joint channels were noisy or barely changed over time, so choosing useful features and handling the class imbalance were important parts of the work.
+Each sample contains 160 timesteps of skeletal joint measurements. The main challenge was the class imbalance: most sequences belonged to the no-pain class, while high-pain examples were rare. Some joint features were also noisy or almost constant, making it harder to learn useful motion patterns.
 
-## What we tried
+## Approach
 
-The main approach in the available notebooks is a **BiLSTM with multi-head self-attention**, implemented in TensorFlow/Keras. The pipeline:
+### Preprocessing
 
-- Sorts measurements by sample and time, removes the constant `joint_30` feature, and reshapes the data into sequences of shape `(160, 30)`.
-- Uses a stratified 80/20 train/validation split and random oversampling of minority classes in the training set.
-- Passes each sequence through two bidirectional LSTM layers, followed by four-head self-attention, temporal average pooling, and a dense classifier with Swish activations.
-- Compares six learning-rate and batch-size combinations, selecting the model using validation macro F1.
-- Retrains the selected configuration on all labeled data and produces a CSV submission for the challenge.
+We first organized the joint measurements into fixed-length sequences. The available notebooks include:
 
-The [project report](report/AN2DL_First_Challenge_Report.pdf) also describes a second approach combining **1D CNNs, BiLSTMs, attention, and a separate branch for survey features**. It was designed to use both local motion patterns and longer-term context.
+- Sorting the data by sample and timestep, then reshaping it into sequences of 160 frames.
+- Removing `joint_30`, which was nearly constant, leaving 30 joint features per frame.
+- Splitting the labeled data into training and validation sets (80/20), with stratification to preserve class proportions.
+- Oversampling minority classes in the training set to reduce the effect of class imbalance.
+
+### Models
+
+We explored two temporal modeling approaches:
+
+- **BiLSTM + Multi-Head Attention:** two bidirectional LSTM layers learn motion patterns over time. A four-head self-attention layer and a dense classification head are used to predict the pain level. We tested different learning rates and batch sizes and selected the configuration using validation macro F1.
+- **CNN + BiLSTM + Attention:** the second approach, described in the report, combines 1D convolutions for local motion patterns with BiLSTMs and a custom attention layer. It also uses a separate branch for the four survey features, along with additional statistical features and test-time augmentation.
+
+The supplied notebooks implement the first approach in **TensorFlow/Keras**. The implementation of the second model is described in the report but is not included in the available code files.
 
 ## Results
 
-The saved output of the provided BiLSTM notebook reports the following results on its stratified validation split:
+The final challenge report gives the following approximate validation F1 scores:
 
-| Metric | Score |
+| Model | Reported validation F1 |
 | --- | ---: |
-| Macro F1 | **0.8553** |
-| Weighted F1 | 0.9409 |
-| Accuracy | 0.9398 |
+| BiLSTM + Multi-Head Attention | ~0.94 |
+| CNN + BiLSTM + Attention | ~0.95 |
 
-The best configuration used a learning rate of `1e-3`, batch size `32`, and oversampling. The high-pain class remained the hardest to classify.
+The saved output in the available BiLSTM notebook reports **0.8553 macro F1**, **0.9409 weighted F1**, and **93.98% accuracy** on its validation split. These are different metrics, so they should not be treated as the same score.
 
-The original report gives approximate validation F1 values of **0.94** for the BiLSTM-attention model and **0.95** for the CNN-BiLSTM approach. These are figures from the report, not values reproduced by the uploaded notebooks; the saved notebook output distinguishes macro F1 from weighted F1 and accuracy.
+The best configuration in the notebook used a learning rate of `1e-3`, batch size `32`, and oversampling. The high-pain class remained the most difficult because it had relatively few examples.
 
-## Files
+## Repository files
 
-- [`notebooks/AN2DL_Challenge1_Code1.ipynb`](notebooks/AN2DL_Challenge1_Code1.ipynb) — BiLSTM, multi-head attention, hyperparameter experiments, and submission code.
-- [`notebooks/AN2DL_Challenge1_Code2.ipynb`](notebooks/AN2DL_Challenge1_Code2.ipynb) — second uploaded notebook.
-- [`report/AN2DL_First_Challenge_Report.pdf`](report/AN2DL_First_Challenge_Report.pdf) — full challenge report, including both model approaches.
+- [`AN2DL_Challenge1_Code1.ipynb`](AN2DL_Challenge1_Code1.ipynb) — BiLSTM, multi-head attention, model selection, and submission generation.
+- [`AN2DL_Challenge1_Code2.ipynb`](AN2DL_Challenge1_Code2.ipynb) — second uploaded notebook (currently identical to Code1).
+- [`AN2DL_1_report.pdf`](AN2DL_1_report.pdf) — full project report covering both approaches and their results.
 
-**Note:** The two supplied notebook files are identical. Both contain the BiLSTM-attention implementation; the CNN-BiLSTM model described in the report is not present in these files.
+## Running the notebooks
 
-## Running the code
-
-The notebooks were run with TensorFlow/Keras (the saved output shows TensorFlow 2.19.0). Install the dependencies with:
-
-```bash
-pip install -r requirements.txt
-```
-
-You will need the challenge CSV files, which are **not included** here:
+The notebooks use **Python and TensorFlow/Keras** and were developed for a notebook environment such as Google Colab. To run them, you need the original challenge data:
 
 - `pirate_pain_train.csv`
 - `pirate_pain_train_labels.csv`
 - `pirate_pain_test.csv`
 
-Put these in the notebook runtime's working directory (for example, `/content` in Google Colab) or update the `pd.read_csv(...)` paths. Run the notebook cells in order to train the model, save its `.keras` checkpoint, and generate `submission.csv`.
+Place these files in the working directory, or update the paths in the notebook. Run the cells in order to prepare the sequences, train and evaluate the model, and generate `submission.csv`. The dataset and trained weights are not included in the repository.
 
-This is a course challenge project, not a clinically validated pain-assessment system.
+This is a course project and has not been validated for clinical pain assessment.
