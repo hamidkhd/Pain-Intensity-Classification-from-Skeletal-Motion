@@ -1,4 +1,4 @@
-# Pain Intensity Classification
+# Pain Intensity Classification from Skeletal Motion
 
 This repository contains our work for the first Artificial Neural Networks and Deep Learning (AN2DL) challenge, completed in November 2025. The task was to classify human movement sequences into three pain levels: **no pain, low pain, and high pain**.
 
